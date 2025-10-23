@@ -1,6 +1,9 @@
 # Interop-LookupTable
-InterSystems IRIS interoperability Lookup table UI    
-<img src="https://community.intersystems.com/sites/default/files/inline/images/images/image(12015).png"></img>    
+InterSystems IRIS interoperability Lookup table UI      
+<p>
+<img src="https://raw.githubusercontent.com/r-cemper/PR_Interop-LookupTable/refs/heads/main/ScreenShot.jpg" width=600></img>
+</p>  
+
 ### Prerequisites
 Make sure you have [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and [Docker desktop](https://www.docker.com/products/docker-desktop) installed.
 ### Installation
