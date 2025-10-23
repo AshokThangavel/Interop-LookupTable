@@ -1,6 +1,16 @@
-    zn "%SYS"
-    do ##class(Security.Users).UnExpireUserPasswords("*")
-    zpm "install passwordless"
-    zn "USER"
-    zpm "load /home/irisowner/dev/ -v":1
-    halt
+    zn "%SYS"   
+    do ##class(Security.Users).UnExpireUserPasswords("*")    
+    zpm "install passwordless"   
+    zn "USER"  
+    zpm "load /home/irisowner/dev/ -v":1   
+  
+    ; generate some demo lookup tables   
+    set %1="for j=1:1:5+$r(10) x %2,%3,%4"  
+    set %2="set %key=##class(%PopulateUtils).LastName()"  
+    set %3="set %val=$ClassMethod(""%PopulateUtils"",%tab)"  
+    set %4="set ^Ens.LookupTable(%tab,%key)=%val"  
+    set %5="set ^Ens.LookupTable(%tab)=$lb($h) write !,""LookupTable "",%tab"   
+    x "for %tab=""FirstName"",""City"",""Company"",""Street"",""SSN"" x %1,%5"   
+    ; just in Docker
+
+    halt 
