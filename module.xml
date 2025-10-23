@@ -3,7 +3,7 @@
   <Document name="Interop-LookupTable.ZPM">
     <Module>
       <Name>Interop-LookupTable</Name>
-      <Version>0.1.0</Version>
+      <Version>0.1.1</Version>
       <Description>Interop-LookupTable</Description>
       <Keywords>Terminal, COS</Keywords>
       <Packaging>module</Packaging>
