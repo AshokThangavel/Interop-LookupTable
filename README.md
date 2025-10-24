@@ -63,7 +63,8 @@ Access the InterSystems IRIS **System Management Portal** at:
 ## 🖼️ Screenshot
 
 Below is a sample view of the Lookup Table UI:
-<img width="1245" height="817" alt="image" src="https://github.com/user-attachments/assets/2bdc3067-9658-43ac-9390-bd12a1a32bfb" />
+<img width="1241" height="715" alt="image" src="https://github.com/user-attachments/assets/8bc872b3-b509-4452-bf5e-99a59b1d49c5" />
+
 
 
 ---
