@@ -4,6 +4,8 @@ Parameter Title As STRING [ Final ] = "LookUp Tables";
 
 Parameter APPLICATION As STRING = "LookUp Tables";
 
+Parameter LookupGbl As STRING [ Internal ] = "^Ens.LookupTable";
+
 ClassMethod OnPage() As %Status
 {
 	Do ..OnPageCSPROOT()
@@ -68,7 +70,13 @@ ClassMethod ShowLookupTables() As %Status
     <div class="main-container">
         <div class="left-panel">
             <div class="left-panel-header">
-                <h5>Files</h5>
+            <select id="namespaceSelect">
+            >
+    Set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT Nsp FROM %SYS.Namespace_List()")
+	While rs.%Next() {Write:##class(%EnsembleMgr).IsEnsembleNamespace(rs.Nsp) "<option value="""_rs.Nsp_""">"_rs.Nsp_"</option>"}
+    &HTML<
+            </select>
+                <h5>Tables</h5>
                 <button class="add-file-btn" onclick="showCreateFileModal()" title="Create New File">
                     <i class="bi bi-plus"></i>
                 </button>
@@ -236,7 +244,7 @@ ClassMethod ShowLookupTables() As %Status
 	Return $$$OK
 }
 
-ClassMethod LoadCSS()
+ClassMethod LoadCSS() As %Status
 {
 	Set obj = ##class(%Dictionary.CompiledXData).%OpenId($Classname()_"||Style")
 	Return:(obj = "") $$$OK
@@ -256,34 +264,45 @@ XData Style
 </data>
 }
 
-ClassMethod GetLookUpTables()
+ClassMethod GetLookUpTables(pNamespace As %String = "") As %String
 {
+	New $NAMESPACE
+	Set $NAMESPACE = pNamespace
 	Set response = []
 	Set luTable=""
 	For {
-		Set luTable = $Order(^Ens.LookupTable(luTable)) Q:luTable=""
+		Set luTable = $Order(@..#LookupGbl@(luTable)) Q:luTable=""
 		Do response.%Push({"fileName":(luTable)})
 	}
 	Return response.%ToJSON()
 }
 
-ClassMethod fileDetailsData(pLookUpTableName = "") As %String
+ClassMethod fileDetailsData(pLookUpTableName = "", pNamespace As %String = "") As %String
 {
-	If pLookUpTableName="" W "[]"
+	New $NAMESPACE
+	Set $NAMESPACE = pNamespace
+
+	If pLookUpTableName="" Quit "[]"
 	&SQL(SELECT JSON_ARRAYAGG(JSON_OBJECT('key':KeyName,'value':DataValue)) INTO :response
 				FROM Ens_Util.LookupTable WHERE tableName=:pLookUpTableName)
 	Return response
 }
 
-ClassMethod CreateNewLookUpTable(data)
+ClassMethod CreateNewLookUpTable(data As %String = "", pNamespace As %String = "") As %String
 {
+	New $NAMESPACE
+	Set $NAMESPACE = pNamespace
+
 	Set LUTablePayload = ..ProcessPayload(data)
-	Set ^Ens.LookupTable(LUTablePayload.fileName)=$lb($H)
+	Set @..#LookupGbl@(LUTablePayload.fileName)=$lb($H)
 	Return {}.%Set("success",1,"boolean").%ToJSON()
 }
 
-ClassMethod AddNewLookUpTableEntry(data)
+ClassMethod AddNewLookUpTableEntry(data As %String = "", pNamespace As %String = "") As %String
 {
+	New $NAMESPACE
+	Set $NAMESPACE = pNamespace
+
 	Set status = 1
 	Try {
 		Set LUTablePayload =  ..ProcessPayload(data)
@@ -300,8 +319,11 @@ ClassMethod AddNewLookUpTableEntry(data)
 	Return {}.%Set("success",status,"boolean").%ToJSON()
 }
 
-ClassMethod SaveLUTDatas(data)
+ClassMethod SaveLUTDatas(data As %String = "", pNamespace As %String = "") As %String
 {
+	New $NAMESPACE
+	Set $NAMESPACE = pNamespace
+
 	Set status = 1
 	Try {
 		Set LUTablePayload = ..ProcessPayload(data)
@@ -319,8 +341,11 @@ ClassMethod SaveLUTDatas(data)
 	Return {}.%Set("success",status,"boolean").%ToJSON()
 }
 
-ClassMethod DeleteKeys(data)
+ClassMethod DeleteKeys(data As %String = "", pNamespace As %String = "")
 {
+	New $NAMESPACE
+	Set $NAMESPACE = pNamespace
+
 	Set status = 1
 	Try {
 		Set LUTablePayload = ..ProcessPayload(data)
@@ -336,7 +361,7 @@ ClassMethod DeleteKeys(data)
 	Return {}.%Set("success",status,"boolean").%ToJSON()
 }
 
-ClassMethod ProcessPayload(pData) [ CodeMode = expression ]
+ClassMethod ProcessPayload(pData As %String = "") As %DynamicObject [ CodeMode = expression ]
 {
 ##class(%DynamicAbstractObject).%FromJSON(pData)
 }
@@ -345,16 +370,21 @@ ClassMethod Scripts()
 {
 	&HTML<
 	<script language="javascript">
-        // Simulated API data
-        let fileNamesData =#server(..GetLookUpTables())#;
+        let namespaceSelect = document.getElementById('namespaceSelect');
+        let namespace = namespaceSelect.value
+        let selectedNamespace = namespace;
+        //Get the Lookup tables for namespace
+        let fileNamesData =#server(..GetLookUpTables(selectedNamespace))#;
         fileNamesData = JSON.parse(fileNamesData);
-        console.log(fileNamesData);
 
         let fileDetailsData ;
         let originalData = []; // To store original data for comparison
         let currentFileName = '';
         let oldValueColumnVisible = false; // Track if old value column is visible
         let pendingFileSwitch = null; // Store the file switch request when confirmation is needed
+
+		namespaceSelect = document.getElementById('namespaceSelect');
+        if (namespaceSelect) namespaceSelect.addEventListener('change', changeNamespace);
 
         let dataTable = null;
 
@@ -381,13 +411,43 @@ ClassMethod Scripts()
                 }
             });
         }
+	function changeNamespace(namespace = '') {
+	    const namespaceSelect = document.getElementById('namespaceSelect');
+	    if (namespaceSelect) {
+	        selectedNamespace = namespaceSelect.value;
+	        const currentNamespace = document.getElementById('currentNamespace');
+	        if (currentNamespace) {
+	            currentNamespace.textContent = selectedNamespace;
+	        }
 
+	        // Clear the right panel
+	        $('#emptyState').show();
+	        $('#detailsContainer').hide();
+
+	        // Destroy existing DataTable if it exists
+	        if (dataTable) {
+	            dataTable.destroy();
+	            dataTable = null;
+	        }
+
+	        // Reset current file tracking
+	        currentFileName = '';
+	        originalData = [];
+	        oldValueColumnVisible = false;
+
+	        // Remove active state from all file items
+	        $('.file-item').removeClass('active');
+
+	       let fileNamesData1 =#server(..GetLookUpTables(selectedNamespace))#;
+	        fileNamesData1 = JSON.parse(fileNamesData1);
+	        loadFileList1(fileNamesData1);
+	    }
+	}
         // Load file list from API
         function loadFileList() {
             const fileList = $('#fileList');
             fileList.empty();
 
- 			console.log(fileNamesData);
             // Simulate API call
             setTimeout(() => {
                 fileNamesData.forEach(file => {
@@ -434,7 +494,7 @@ ClassMethod Scripts()
             showLoading();
 
             setTimeout(() => {
-                details = #server(..fileDetailsData(fileName))#;
+                details = #server(..fileDetailsData(fileName,selectedNamespace))#;
                 details = JSON.parse(details);
                 loadFileDetails(fileName, details);
             }, 800);
@@ -612,7 +672,7 @@ ClassMethod Scripts()
 
             // Simulate API call
             setTimeout(() => {
-                response = #server(..SaveLUTDatas(JSON.stringify(updateData)))#;
+                response = #server(..SaveLUTDatas(JSON.stringify(updateData),selectedNamespace))#;
 
                  response = JSON.parse(response);
 
@@ -708,12 +768,11 @@ ClassMethod Scripts()
 
             // Simulate API call
             setTimeout(() => {
-                response = #server(..CreateNewLookUpTable(JSON.stringify(newFileData)))#;
+                response = #server(..CreateNewLookUpTable(JSON.stringify(newFileData),selectedNamespace))#;
                 response = JSON.parse(response)
                 if (response.success) {
                     //setTimeout(() => {
-                        let fileNamesData1 =#server(..GetLookUpTables())#;
-                        console.log(fileNamesData1);
+                        let fileNamesData1 =#server(..GetLookUpTables(selectedNamespace))#;
                         fileNamesData1 = JSON.parse(fileNamesData1);
                         loadFileList1(fileNamesData1);
                         showNotification(`Lookup table "${fileName}" created successfully`, 'success');
@@ -729,7 +788,6 @@ ClassMethod Scripts()
             const fileList = $('#fileList');
             fileList.empty();
 
- 			console.log(fileNamesData);
             // Simulate API call
             setTimeout(() => {
                 fileNamesData.forEach(file => {
@@ -786,12 +844,12 @@ ClassMethod Scripts()
 
             // Simulate API call
             setTimeout(() => {
-                response = #server(..AddNewLookUpTableEntry(JSON.stringify(newData)))#;
+                response = #server(..AddNewLookUpTableEntry(JSON.stringify(newData),selectedNamespace))#;
                 response = JSON.parse(response);
                 if (response.success) {
                     // Reload the current file data to get the latest
                     setTimeout(() => {
-                        details = #server(..fileDetailsData(currentFileName))#;
+                        details = #server(..fileDetailsData(currentFileName,selectedNamespace))#;
                         details = JSON.parse(details);
                         loadFileDetails(currentFileName, details);
                         showNotification('New entry added successfully', 'success');
@@ -848,11 +906,11 @@ ClassMethod Scripts()
                 keysToDelete: selectedKeys
             };
             setTimeout(() => {
-                response = #server(..DeleteKeys(JSON.stringify(deleteData)))#;
+                response = #server(..DeleteKeys(JSON.stringify(deleteData),selectedNamespace))#;
                 response = JSON.parse(response);
                 if (response.success) {
 	              setTimeout(() => {
-	                     details = #server(..fileDetailsData(currentFileName))#;
+	                     details = #server(..fileDetailsData(currentFileName,selectedNamespace))#;
                 		details = JSON.parse(details);
                 		//loadFileList(details);
                         loadFileDetails(currentFileName, details);
