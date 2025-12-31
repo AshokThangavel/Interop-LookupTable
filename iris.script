@@ -3,4 +3,7 @@
     zpm "install passwordless"
     zn "USER"
     zpm "load /home/irisowner/dev/ -v":1
+    // auto populate one sample lookup table
+    set ^Ens.LookupTable("test")=$lb($horolog)
+    set ^Ens.LookupTable("test","testkey")="testvalue"
     halt

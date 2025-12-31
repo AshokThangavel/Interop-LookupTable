@@ -3,9 +3,9 @@
   <Document name="Interop-LookupTable.ZPM">
     <Module>
       <Name>Interop-LookupTable</Name>
-      <Version>0.1.0</Version>
-      <Description>Interop-LookupTable</Description>
-      <Keywords>Terminal, COS</Keywords>
+      <Version>1.0.1</Version>
+      <Description>It provides an easy-to-use web interface for creating, editing, and managing Lookup Tables directly</Description>
+      <Keywords>interoperability,Lookuptable,Production,data lookup tables</Keywords>
       <Packaging>module</Packaging>
       <Resource Name="Interop.PKG"/>
       <LifecycleClass>%IPM.Lifecycle.Module</LifecycleClass>
