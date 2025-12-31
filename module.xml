@@ -3,7 +3,7 @@
   <Document name="Interop-LookupTable.ZPM">
     <Module>
       <Name>Interop-LookupTable</Name>
-      <Version>1.0.1</Version>
+      <Version>1.0.2</Version>
       <Description>It provides an easy-to-use web interface for creating, editing, and managing Lookup Tables directly</Description>
       <Keywords>interoperability,Lookuptable,Production,data lookup tables</Keywords>
       <Packaging>module</Packaging>
