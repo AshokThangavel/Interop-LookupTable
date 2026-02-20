@@ -1,56 +1,11 @@
 Class Interop.LookUpTable Extends %CSP.Page
 {
+
 Parameter Title As STRING [ Final ] = "LookUp Tables";
 
 Parameter APPLICATION As STRING = "LookUp Tables";
 
 Parameter LookupGbl As STRING [ Internal ] = "^Ens.LookupTable";
-
-ClassMethod OnPage() As %Status
-{
-	Do ..OnPageCSPROOT()
-	Return $$$OK
-}
-
-ClassMethod OnPageCSPROOT() As %Boolean
-{
-	Do ..OnPageHTML()
-}
-
-ClassMethod OnPageHTML() As %Boolean
-{
-	Write "<html>"
-	Write !
-	Do ..OnPageHEAD()
-	Do ..OnPageBODY()
-	Write !,"</html>"
-	Return $$$OK
-}
-
-ClassMethod OnPageHEAD() As %Boolean
-{
-	Write "<head>",!
-	Write "<meta charset=""UTF-8"">"
-	write "<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">"
-	Write "<link rel=""shortcut icon"" href=""portal/ISC_IRIS_icon.ico"">"
-	Write !,"<title>"_..#Title_"</title>",!
-	Write " <link rel=""stylesheet"" href=""https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"">",!
-	Write "<style>",!
-	Do ..LoadCSS()
-	Write "</style>",!
-	Write "<link href=""https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"" rel=""stylesheet"">"
-	Write "<link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css"">"
-	Write "<link rel=""stylesheet"" href=""https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"">"
-	Write "</head>",!
-	Write ..HyperEventHead(0,0)
-	Return $$$OK
-}
-
-ClassMethod OnPageBODY() As %Boolean
-{
-	Do ..ShowLookupTables()
-	Return $$$OK
-}
 
 ClassMethod ShowLookupTables() As %Status
 {
@@ -61,7 +16,7 @@ ClassMethod ShowLookupTables() As %Status
 <script language="JavaScript" type="text/javascript" src="/irishealth2025com/csp/broker/cspxmlhttp.js"></script><script language="JavaScript" type="text/javascript" src="/irishealth2025com/csp/broker/cspbroker.js"></script>
 <body>
     <header class="app-header">
-        <h1 title="IntegrityLog files genreated via Integrity Check Task"><i class="bi bi-shield-check me-2"></i>LookUp Table</h1>
+        <h1 ><i class="bi bi-shield-check me-2"></i>LookUp Table</h1>
         <button class="theme-toggle" onclick="toggleTheme()">
             <i class="bi bi-moon-fill" id="theme-icon"></i>
         </button>
@@ -101,12 +56,20 @@ ClassMethod ShowLookupTables() As %Status
                 <i class="bi bi-folder2-open"></i>
                 <h4>Select a file to view details</h4>
                 <p>Click on any file from the left panel to load its Lookup table details</p>
+                <p>#($Piece($ZVersion," ",1,5))#</p>
             </div>
 
             <div id="detailsContainer" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h5 id="selectedFileName"></h5>
                     <div class="action-buttons">
+                    <button class="btn-secondary" id="exportBtn" onclick="exportToCSV()">
+    <i class="bi bi-upload me-1"></i> Export CSV
+</button>
+<button class="btn-secondary" id="importBtn" onclick="document.getElementById('importFile').click()">
+    <i class="bi bi-download me-1"></i> Import CSV
+</button>
+<input type="file" id="importFile" style="display:none" accept=".csv" onchange="importFromCSV(this)">
                         <button class="add-btn" id="addNewBtn" onclick="showAddModal()">
                             <i class="bi bi-plus-circle me-1"></i> Add New
                         </button>
@@ -246,7 +209,7 @@ ClassMethod ShowLookupTables() As %Status
 
 ClassMethod LoadCSS() As %Status
 {
-	Set obj = ##class(%Dictionary.CompiledXData).%OpenId($Classname()_"||Style")
+	Set obj = ##class(%Dictionary.CompiledXData).%OpenId($ClassName()_"||Style")
 	Return:(obj = "") $$$OK
 	Set xdata = obj.Data
 	Set status = ##class(%XML.TextReader).ParseStream(xdata, .textreader)
@@ -266,12 +229,12 @@ XData Style
 
 ClassMethod GetLookUpTables(pNamespace As %String = "") As %String
 {
-	New $NAMESPACE
-	Set $NAMESPACE = pNamespace
+	New $Namespace
+	Set $Namespace = pNamespace
 	Set response = []
 	Set luTable=""
 	For {
-		Set luTable = $Order(@..#LookupGbl@(luTable)) Q:luTable=""
+		Set luTable = $Order(@..#LookupGbl@(luTable)) Quit:luTable=""
 		Do response.%Push({"fileName":(luTable)})
 	}
 	Return response.%ToJSON()
@@ -279,8 +242,8 @@ ClassMethod GetLookUpTables(pNamespace As %String = "") As %String
 
 ClassMethod fileDetailsData(pLookUpTableName = "", pNamespace As %String = "") As %String
 {
-	New $NAMESPACE
-	Set $NAMESPACE = pNamespace
+	New $Namespace
+	Set $Namespace = pNamespace
 
 	If pLookUpTableName="" Quit "[]"
 	&SQL(SELECT JSON_ARRAYAGG(JSON_OBJECT('key':KeyName,'value':DataValue)) INTO :response
@@ -290,18 +253,18 @@ ClassMethod fileDetailsData(pLookUpTableName = "", pNamespace As %String = "") A
 
 ClassMethod CreateNewLookUpTable(data As %String = "", pNamespace As %String = "") As %String
 {
-	New $NAMESPACE
-	Set $NAMESPACE = pNamespace
+	New $Namespace
+	Set $Namespace = pNamespace
 
 	Set LUTablePayload = ..ProcessPayload(data)
-	Set @..#LookupGbl@(LUTablePayload.fileName)=$lb($H)
+	Set @..#LookupGbl@(LUTablePayload.fileName)=$ListBuild($Horolog)
 	Return {}.%Set("success",1,"boolean").%ToJSON()
 }
 
 ClassMethod AddNewLookUpTableEntry(data As %String = "", pNamespace As %String = "") As %String
 {
-	New $NAMESPACE
-	Set $NAMESPACE = pNamespace
+	New $Namespace
+	Set $Namespace = pNamespace
 
 	Set status = 1
 	Try {
@@ -321,30 +284,34 @@ ClassMethod AddNewLookUpTableEntry(data As %String = "", pNamespace As %String =
 
 ClassMethod SaveLUTDatas(data As %String = "", pNamespace As %String = "") As %String
 {
-	New $NAMESPACE
-	Set $NAMESPACE = pNamespace
+	New $Namespace
+	Set $Namespace = pNamespace
 
 	Set status = 1
 	Try {
 		Set LUTablePayload = ..ProcessPayload(data)
 		Set LUTable = LUTablePayload.fileName
 		Set LUTableValue= LUTablePayload.updates.%GetIterator()
+		Tstart
 		While LUTableValue.%GetNext(,.LUTableData) {
 			Set key = LUTableData.key
 			Set value= LUTableData.value
-			&SQL(UPDATE Ens_Util.LookupTable SET DataValue=:value WHERE tableName=:LUTable AND KeyName=:key)
+			&SQL(INSERT OR UPDATE Ens_Util.LookupTable (TableName, KeyName, DataValue)
+                 VALUES (:LUTable, :key, :value))
 		}
+		Tcommit
 	}
 	Catch ex {
 		Set status=0
+		Trollback
 	}
 	Return {}.%Set("success",status,"boolean").%ToJSON()
 }
 
 ClassMethod DeleteKeys(data As %String = "", pNamespace As %String = "")
 {
-	New $NAMESPACE
-	Set $NAMESPACE = pNamespace
+	New $Namespace
+	Set $Namespace = pNamespace
 
 	Set status = 1
 	Try {
@@ -359,6 +326,52 @@ ClassMethod DeleteKeys(data As %String = "", pNamespace As %String = "")
 		Set status=0
 	}
 	Return {}.%Set("success",status,"boolean").%ToJSON()
+}
+
+ClassMethod OnPage() As %Status
+{
+	Do ..OnPageCSPROOT()
+	Return $$$OK
+}
+
+ClassMethod OnPageCSPROOT() As %Boolean
+{
+	Do ..OnPageHTML()
+}
+
+ClassMethod OnPageHTML() As %Boolean
+{
+	Write "<html>"
+	Write !
+	Do ..OnPageHEAD()
+	Do ..OnPageBODY()
+	Write !,"</html>"
+	Return $$$OK
+}
+
+ClassMethod OnPageHEAD() As %Boolean
+{
+	Write "<head>",!
+	Write "<meta charset=""UTF-8"">"
+	Write "<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">"
+	Write "<link rel=""shortcut icon"" href=""portal/ISC_IRIS_icon.ico"">"
+	Write !,"<title>"_..#Title_"</title>",!
+	Write " <link rel=""stylesheet"" href=""https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"">",!
+	Write "<style>",!
+	Do ..LoadCSS()
+	Write "</style>",!
+	Write "<link href=""https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"" rel=""stylesheet"">"
+	Write "<link rel=""stylesheet"" href=""https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css"">"
+	Write "<link rel=""stylesheet"" href=""https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"">"
+	Write "</head>",!
+	Write ..HyperEventHead(0,0)
+	Return $$$OK
+}
+
+ClassMethod OnPageBODY() As %Boolean
+{
+	Do ..ShowLookupTables()
+	Return $$$OK
 }
 
 ClassMethod ProcessPayload(pData As %String = "") As %DynamicObject [ CodeMode = expression ]
@@ -643,87 +656,70 @@ ClassMethod Scripts()
 
         // Save all changes
         function saveChanges() {
-            const changedRows = [];
+		    const changedRows = [];
+		    dataTable.rows('.changed-row').every(function() {
+		        const rowNode = this.node();
+		        const rowData = this.data();
+		        const key = $(rowNode).find('td:nth-child(2)').text().trim();
+		        const newValue = $(rowNode).find('td:nth-child(3)').text().trim();
 
-            $('#detailsTable tbody tr.changed-row').each(function() {
-                const row = $(this);
-                const key = row.find('td:nth-child(2)').text(); // Key is in second column now
-                const newValue = row.find('td:nth-child(3)').text(); // Value is in third column now
+		        if (key) {
+		            changedRows.push({
+		                key: key,
+		                value: newValue
+		            });
+		        }
+		    });
 
-                changedRows.push({
-                    key: key,
-                    value: newValue
-                });
-            });
+		    if (changedRows.length === 0) {
+		        showNotification('No changes to save', 'info');
+		        return;
+		    }
 
-            if (changedRows.length === 0) {
-                showNotification('No changes to save', 'info');
-                return;
-            }
+		    showLoading();
+		    const updateData = {
+		        fileName: currentFileName,
+		        updates: changedRows
+		    };
+		    setTimeout(() => {
+		        try {
+		            let responseRaw =  #server(..SaveLUTDatas(JSON.stringify(updateData),selectedNamespace))#;
+		            let response = JSON.parse(responseRaw);
 
-            // Show loading
-            showLoading();
+		            if (response.success) {
+		                changedRows.forEach(update => {
+		                    const originalItem = originalData.find(item => item.key === update.key);
+		                   if (originalItem) {
+		                        originalItem.value = update.value;
+		                    } else {
+		                        originalData.push({
+		                            key: update.key,
+		                            value: update.value
+		                        });
+		                    }
+		                });
+		                dataTable.rows('.changed-row').every(function() {
+		                    const rowNode = this.node();
+		                    $(rowNode).find('td.old-value-cell').text('');
+		                    $(rowNode).removeClass('changed-row');
+		                });
 
-            // Prepare data for API call
-            const updateData = {
-                fileName: currentFileName,
-                updates: changedRows
-            };
+		                hideOldValueColumnIfNeeded();
+		                showNotification('Changes saved successfully to IRIS', 'success');
+		            } else {
+		                showNotification('Error saving: ' + (response.message || 'Unknown error'), 'error');
+		            }
+		        } catch (err) {
+		            showNotification('Critical error during save process', 'error');
+		        } finally {
+		            hideLoading();
+		            // Redraw table to refresh visual state
+		            dataTable.draw(false);
+		        }
+		    }, 500);
+		}
 
-            // Simulate API call
-            setTimeout(() => {
-                response = #server(..SaveLUTDatas(JSON.stringify(updateData),selectedNamespace))#;
 
-                 response = JSON.parse(response);
-
-                if (response.success) {
-                    // Update original data
-                    changedRows.forEach(update => {
-                        const originalItem = originalData.find(item => item.key === update.key);
-                        if (originalItem) {
-                            originalItem.value = update.value;
-                        }
-                    });
-
-                    // Remove changed class from rows
-                    $('#detailsTable tbody tr.changed-row').removeClass('changed-row');
-
-                    // Hide the old value column
-                    hideOldValueColumnIfNeeded();
-
-                    showNotification('Changes saved successfully', 'success');
-                } else {
-                    // Revert changes on failure
-                    revertChanges();
-                    showNotification('Failed to save changes. Reverted to original values.', 'error');
-                }
-
-                hideLoading();
-            }, 1000);
-        }
-
-        // Revert changes to original values
-        function revertChanges() {
-            $('#detailsTable tbody tr.changed-row').each(function() {
-                const row = $(this);
-                const key = row.find('td:nth-child(2)').text(); // Key is in second column now
-                const originalItem = originalData.find(item => item.key === key);
-
-                if (originalItem) {
-                    // Revert the value in the third column
-                    row.find('td.editable-cell').text(originalItem.value);
-
-                    // Clear the old value in the fourth column
-                    row.find('td.old-value-cell').text('');
-                }
-
-                // Remove changed class
-                row.removeClass('changed-row');
-            });
-
-            // Hide the old value column
-            hideOldValueColumnIfNeeded();
-        }
 
         // Cancel changes
         function cancelChanges() {
@@ -757,16 +753,12 @@ ClassMethod Scripts()
                 return;
             }
 
-            // Show loading
             showLoading();
             closeCreateFileModal();
 
-            // Prepare data for API call
             const newFileData = {
                 fileName: fileName
             };
-
-            // Simulate API call
             setTimeout(() => {
                 response = #server(..CreateNewLookUpTable(JSON.stringify(newFileData),selectedNamespace))#;
                 response = JSON.parse(response)
@@ -787,8 +779,6 @@ ClassMethod Scripts()
         function loadFileList1(fileNamesData) {
             const fileList = $('#fileList');
             fileList.empty();
-
-            // Simulate API call
             setTimeout(() => {
                 fileNamesData.forEach(file => {
                     const li = $(`
@@ -1000,6 +990,93 @@ ClassMethod Scripts()
             const icon = document.getElementById('theme-icon');
             icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
         }
+
+        function exportToCSV() {
+		    if (!currentFileName) {
+		        showNotification('Select a table first', 'warning');
+		        return;
+		    }
+		    let csv = ['Key,Value']; // Header
+		    const data = dataTable.rows().data();
+		    data.each(function(row) {
+		        const key = `"${row[1].replace(/"/g, '""')}"`;
+		        const value = `"${row[2].replace(/"/g, '""')}"`;
+		        csv.push(`${key},${value}`);
+		    });
+
+		    const csvString = csv.join('\n');
+		    const blob = new Blob([csvString], { type: 'text/csv' });
+		    const url = window.URL.createObjectURL(blob);
+		    const a = document.createElement('a');
+
+		    a.setAttribute('href', url);
+		    a.setAttribute('download', `${currentFileName}_export.csv`);
+		    a.click();
+		    showNotification('Export successful', 'success');
+		}
+
+		function importFromCSV(input) {
+		    const file = input.files[0];
+		    if (!file) return;
+
+		    const reader = new FileReader();
+		    reader.onload = function(e) {
+		        const text = e.target.result;
+		        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
+		        let importCount = 0;
+
+		        const sanitize = (str) => {
+		            if (!str) return "";
+		            return str.toString().replace(/^["']|["']$/g, '').trim();
+		        };
+
+		        for (let i = 1; i < lines.length; i++) {
+		            const columns = lines[i].split(',');
+		            if (columns.length < 2) continue;
+
+		            const csvKey = sanitize(columns[0]);
+		            const csvValue = sanitize(columns[1]);
+
+		            let matched = false;
+
+		            // 1. Try to find and update existing row
+		            dataTable.rows().every(function () {
+		                const rowData = this.data();
+		                // Check if index 1 is the key
+		                if (sanitize(rowData[1]) === csvKey) {
+		                    rowData[2] = csvValue; // Update value
+		                    this.data(rowData);
+		                    $(this.node()).addClass('changed-row');
+		                    matched = true;
+		                    importCount++;
+		                }
+		            });
+
+		            // 2. If no match found, INSERT as a new row
+		            if (!matched) {
+		                const newRowNode = dataTable.row.add([
+		                    `<input type="checkbox" class="row-checkbox" data-key="${csvKey}">`, // Col 0
+		                    csvKey,   // Col 1 (Key)
+		                    csvValue, // Col 2 (Value)
+		                    ""        // Col 3 (Old Value placeholder)
+		                ]).draw(false).node();
+
+		                $(newRowNode).addClass('changed-row'); // Mark for saving
+		                importCount++;
+		            }
+		        }
+
+		        if (importCount > 0) {
+		            showNotification(`Processed ${importCount} records. Click 'Save Changes' to upload to IRIS.`, 'success');
+		            if (!oldValueColumnVisible) {
+		                dataTable.column(3).visible(true);
+		                oldValueColumnVisible = true;
+		            }
+		        }
+		        input.value = '';
+		    };
+		    reader.readAsText(file);
+		}
     </script>
 	>
 }
